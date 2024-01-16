@@ -8,6 +8,9 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
+#define MAX_PUNCH_COMBO_NUM 4
+#define MAX_KICK_COMBO_NUM 3
+
 ALABCharacterPlayer::ALABCharacterPlayer()
 {
 	GetCharacterMovement()->bOrientRotationToMovement = true;
@@ -41,6 +44,8 @@ void ALABCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 	{
 		EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &ALABCharacterPlayer::Move);
+		EnhancedInputComponent->BindAction(AttackPunchAction, ETriggerEvent::Triggered, this, &ALABCharacterPlayer::AttackPunch);
+		EnhancedInputComponent->BindAction(AttackKickAction, ETriggerEvent::Triggered, this, &ALABCharacterPlayer::AttackKick);
 	}
 	else
 	{
@@ -50,6 +55,8 @@ void ALABCharacterPlayer::SetupPlayerInputComponent(UInputComponent* PlayerInput
 
 void ALABCharacterPlayer::Move(const FInputActionValue& InputActionValue)
 {
+	if(bAttackPunch || bAttackKick) return;
+	
 	const FVector2D InputAxisVector = InputActionValue.Get<FVector2D>();
 	const FRotator Rotation = GetControlRotation();
 	const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
@@ -59,6 +66,90 @@ void ALABCharacterPlayer::Move(const FInputActionValue& InputActionValue)
 
 	this->AddMovementInput(ForwardDirection, InputAxisVector.Y);
 	this->AddMovementInput(RightDirection, InputAxisVector.X);
+}
+
+void ALABCharacterPlayer::AttackPunch(const FInputActionValue& InputActionValue)
+{
+	if(!AttackPunchMontage || bAttackKick) return;
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if(!AnimInstance) return;
+	
+	// TODO: 특정 타이밍에만 콤보 입력 가능하도록 변경
+	if(bAttackPunch)
+	{
+		if(!bComboEnable) return;
+		
+		ComboNumPunch++;
+		if(ComboNumPunch > MAX_PUNCH_COMBO_NUM) return;
+
+		const FString ComboSectionString = "Combo_" +  FString::FromInt(ComboNumPunch);
+		const FName ComboSectionName = FName(*ComboSectionString);
+		
+		AnimInstance->Montage_Play(AttackPunchMontage);
+		AnimInstance->Montage_JumpToSection(ComboSectionName);
+		//UE_LOG(LogLABCharacter, Warning, TEXT("Start Attack - %s"), *ComboSectionString);
+	}
+	else
+	{
+		AnimInstance->Montage_Play(AttackPunchMontage);
+		ComboNumPunch = 1;
+	}
+
+	bAttackPunch = true;
+	AnimInstance->OnMontageBlendingOut.AddDynamic(this, &ALABCharacterPlayer::OnAttackPunchEnd);
+}
+
+void ALABCharacterPlayer::AttackKick(const FInputActionValue& InputActionValue)
+{
+	if(!AttackKickMontage || bAttackPunch) return;
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if(!AnimInstance) return;
+	
+	// TODO: 특정 타이밍에만 콤보 입력 가능하도록 변경
+	if(bAttackKick)
+	{
+		if(!bComboEnable) return;
+		
+		ComboNumKick++;
+		if(ComboNumKick > MAX_KICK_COMBO_NUM) return;
+
+		const FString ComboSectionString = "Combo_" +  FString::FromInt(ComboNumKick);
+		const FName ComboSectionName = FName(*ComboSectionString);
+		
+		AnimInstance->Montage_Play(AttackKickMontage);
+		AnimInstance->Montage_JumpToSection(ComboSectionName);
+		//UE_LOG(LogLABCharacter, Warning, TEXT("Start Attack - %s"), *ComboSectionString);
+	}
+	else
+	{
+		AnimInstance->Montage_Play(AttackKickMontage);
+		ComboNumKick = 1;
+	}
+
+	bAttackKick = true;
+	AnimInstance->OnMontageBlendingOut.AddDynamic(this, &ALABCharacterPlayer::OnAttackKickEnd);
+}
+
+void ALABCharacterPlayer::OnAttackPunchEnd(UAnimMontage* Montage, bool bInterrupted)
+{
+	bAttackPunch = false;
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if(!AnimInstance) return;
+	
+	AnimInstance->OnMontageBlendingOut.RemoveDynamic(this, &ALABCharacterPlayer::OnAttackPunchEnd);
+}
+
+void ALABCharacterPlayer::OnAttackKickEnd(UAnimMontage* Montage, bool bInterrupted)
+{
+	bAttackKick = false;
+	
+	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+	if(!AnimInstance) return;
+	
+	AnimInstance->OnMontageBlendingOut.RemoveDynamic(this, &ALABCharacterPlayer::OnAttackKickEnd);
 }
 
 

@@ -26,6 +26,16 @@ public:
 
 private:
 	void Move(const FInputActionValue& InputActionValue);
+	void AttackPunch(const FInputActionValue& InputActionValue);
+	void AttackKick(const FInputActionValue& InputActionValue);
+
+	UFUNCTION()
+	void OnAttackPunchEnd(UAnimMontage* Montage, bool bInterrupted);
+	UFUNCTION()
+	void OnAttackKickEnd(UAnimMontage* Montage, bool bInterrupted);
+
+public:
+	void SetComboEnable(bool bEnable) { bComboEnable = bEnable; }
 
 private:
 	// Camera
@@ -36,7 +46,27 @@ private:
 	TObjectPtr<UCameraComponent> FollowCamera;
 
 	// Input
-	UPROPERTY(EditAnywhere, Category = Input)
+	UPROPERTY(EditDefaultsOnly, Category = Input)
 	TObjectPtr<UInputAction> MoveAction;
+
+	UPROPERTY(EditDefaultsOnly, Category = Input)
+	TObjectPtr<UInputAction> AttackPunchAction;
+	
+	UPROPERTY(EditDefaultsOnly, Category = Input)
+	TObjectPtr<UInputAction> AttackKickAction;
+
+	// Animation
+	UPROPERTY(EditDefaultsOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> AttackPunchMontage;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Animation")
+	TObjectPtr<UAnimMontage> AttackKickMontage;
+
+private:
+	bool bComboEnable = false;
+	bool bAttackPunch = false;
+	bool bAttackKick = false;
+	int ComboNumPunch = 1;
+	int ComboNumKick = 1;
 	
 };
