@@ -75,7 +75,6 @@ void ALABCharacterPlayer::AttackPunch(const FInputActionValue& InputActionValue)
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if(!AnimInstance) return;
 	
-	// TODO: 특정 타이밍에만 콤보 입력 가능하도록 변경
 	if(bAttackPunch)
 	{
 		if(!bComboEnable) return;
@@ -107,7 +106,6 @@ void ALABCharacterPlayer::AttackKick(const FInputActionValue& InputActionValue)
 	UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 	if(!AnimInstance) return;
 	
-	// TODO: 특정 타이밍에만 콤보 입력 가능하도록 변경
 	if(bAttackKick)
 	{
 		if(!bComboEnable) return;

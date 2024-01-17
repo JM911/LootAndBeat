@@ -9,9 +9,9 @@ void ALABPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	check(AuraContext);
+	check(LABContext);
 
 	UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer());
 	check(Subsystem);
-	Subsystem->AddMappingContext(AuraContext, 0);
+	Subsystem->AddMappingContext(LABContext, 0);
 }
