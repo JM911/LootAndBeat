@@ -6,19 +6,17 @@
 #include "LootAndBeat/Character/LABCharacterPlayer.h"
 
 void ULABComboNotifyState::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation,
-                                       float TotalDuration)
+                                       float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
-	ALABCharacterPlayer* Player = Cast<ALABCharacterPlayer>(MeshComp->GetOwner());
-	if(Player)
+	if(ALABCharacterPlayer* Player = Cast<ALABCharacterPlayer>(MeshComp->GetOwner()))
 	{
 		Player->SetComboEnable(true);
 	}
 }
 
-void ULABComboNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
+void ULABComboNotifyState::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
 {
-	ALABCharacterPlayer* Player = Cast<ALABCharacterPlayer>(MeshComp->GetOwner());
-	if(Player)
+	if(ALABCharacterPlayer* Player = Cast<ALABCharacterPlayer>(MeshComp->GetOwner()))
 	{
 		Player->SetComboEnable(false);
 	}

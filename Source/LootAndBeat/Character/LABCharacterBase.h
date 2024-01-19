@@ -28,7 +28,8 @@ private:
 	float HitTraceRadius = 100.f;
 	TArray<AActor*> TraceIgnoreActors;
 
-	// TODO: 디버그 블프 변수 및 디버그 드로우 기능 추가
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	bool bDebugTrace = false;
 
 public:
 	// Trace On/Off

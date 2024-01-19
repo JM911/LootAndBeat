@@ -22,4 +22,5 @@ class LOOTANDBEAT_API ILABHit
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
+	virtual void LABApplyHit(AActor* Attacker, float DamageAmount, FVector ForceDirection);
 };

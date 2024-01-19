@@ -5,6 +5,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "LootAndBeat/Interface/LABHit.h"
 
 DEFINE_LOG_CATEGORY(LogLABCharacter);
 
@@ -20,17 +21,39 @@ ALABCharacterBase::ALABCharacterBase()
 void ALABCharacterBase::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
-	// TODO: Trace 조건 체크 후 호출
+	
+	if(bHitTrace)
+	{
+		TraceHitSphere();
+	}
 }
 
 void ALABCharacterBase::TraceHitSphere()
 {
-	FVector CurHitSocketLocation = GetMesh()->GetSocketLocation(HitSocketName);
+	const FVector CurHitSocketLocation = GetMesh()->GetSocketLocation(HitSocketName);
 
-	// TODO: Trace 채널 추가 후 완성
-	//UKismetSystemLibrary::SphereTraceMulti(this, LastHitSocketLocation, CurHitSocketLocation, HitTraceRadius,
-	//	)
+	TArray<FHitResult> OutHitResults;
+	const ETraceTypeQuery HitTraceType = UEngineTypes::ConvertToTraceType(ECollisionChannel::ECC_GameTraceChannel1);
+	const EDrawDebugTrace::Type DebugTrace = bDebugTrace ? EDrawDebugTrace::ForDuration : EDrawDebugTrace::None;
+	
+	UKismetSystemLibrary::SphereTraceMulti(this, LastHitSocketLocation, CurHitSocketLocation, HitTraceRadius,
+		HitTraceType, false, TraceIgnoreActors, DebugTrace, OutHitResults, true);
+
+	for(auto HitResult : OutHitResults)
+	{
+		if(AActor* CurActor = HitResult.GetActor())
+		{
+			// TOOD: 원래 트레이스 함수에서 적용되어야 함... 오작동 원인 찾고 제거
+			if(TraceIgnoreActors.Contains(CurActor)) continue;
+			
+			if(ILABHit* CurHitActor = Cast<ILABHit>(CurActor))
+			{
+				// TODO: 데미지 전달
+				CurHitActor->LABApplyHit(this, 0.f, (CurHitSocketLocation - LastHitSocketLocation).GetSafeNormal());
+			}
+			TraceIgnoreActors.Add(CurActor);
+		}
+	}
 
 	LastHitSocketLocation = CurHitSocketLocation;
 }
