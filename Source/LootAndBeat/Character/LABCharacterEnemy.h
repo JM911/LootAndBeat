@@ -13,5 +13,8 @@ UCLASS()
 class LOOTANDBEAT_API ALABCharacterEnemy : public ALABCharacterBase
 {
 	GENERATED_BODY()
+
+public:
+	ALABCharacterEnemy();
 	
 };
