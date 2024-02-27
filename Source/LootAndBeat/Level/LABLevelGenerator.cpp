@@ -21,7 +21,7 @@ void ULABLevelGenerator::Deinitialize()
 
 void ULABLevelGenerator::GenerateRooms()
 {
-	/* TODO
+	/* 
 	 * - 첫 방 생성 (기본 위치 0, 0, 0 ?)
 	 * - 트리 타면서 다음 방 생성
 	 *		- 이전 방 기준 4방향 중 위치 정해서 적당한 거리 두고 위치 설정
@@ -40,8 +40,13 @@ void ULABLevelGenerator::GenerateRooms()
 		int ParentRoomIndex = RoomTree[curIndex].ParentRoomIndex;
 
 		// 방 생성
-		ALABRoomBase* CurRoom = Cast<ALABRoomBase>(GetWorld()->SpawnActor(RoomTree[curIndex].RoomBP));
-		FVector GenerateLocation(0.f, 0.f, 0.f);
+		//ALABRoomBase* CurRoom = Cast<ALABRoomBase>(GetWorld()->SpawnActor(RoomTree[curIndex].RoomBP));	// Real
+		// Test
+		int randIdx = FMath::RandRange(0, TestRoomArray.Num() - 1);
+		ALABRoomBase* CurRoomPrototype = Cast<ALABRoomBase>(GetWorld()->SpawnActor(TestRoomArray[randIdx].Class));
+		// ~Test
+		FVector CurCenterLocation(0.f, 0.f, 0.f);
+		EAdjacentDirection GenerateDirectionFromParent = EAdjacentDirection::NONE;
 
 		// 위치 잡기
 		if(ParentRoomIndex >= 0)	// 부모 방 존재할 때
@@ -50,53 +55,57 @@ void ULABLevelGenerator::GenerateRooms()
 			ALABRoomBase* ParentRoom = GeneratedRooms[ParentRoomIndex];
 
 			// 이전 방 대비 
-			EAdjacentDirection GenerateDirection = ParentRoom->GetNextAdjacentDirection();
-			ParentRoom->SetAdjecentDirection(GenerateDirection, true);
-			CurRoom->SetAdjecentDirection((EAdjacentDirection)(3 - (int)GenerateDirection), true);	// TODO: RoomBase 함수로 바꾸는 것 고려
+			GenerateDirectionFromParent = ParentRoom->GetNextAdjacentDirection();
+			ParentRoom->SetAdjecentDirection(GenerateDirectionFromParent, true);
 			FVector AddDirectionVector;
 			float InitialAddDistance = 0.f;
-			float InitialRoomDistance = 50.f;
+			float InitialRoomDistance = 500.f;
 			
-			switch(GenerateDirection)
+			switch(GenerateDirectionFromParent)
 			{
 			case EAdjacentDirection::LEFT:
-				AddDirectionVector = FVector(-1.f, 0.f, 0.f);
-				InitialAddDistance = CurRoom->GetWidthLength(true) + ParentRoom->GetWidthLength(true) + InitialRoomDistance; 
+				AddDirectionVector = FVector(0.f, -1.f, 0.f);
+				InitialAddDistance = (CurRoomPrototype->GetHeightLength(true) + ParentRoom->GetHeightLength(true)) * 0.5f + InitialRoomDistance; 
 				break;
 			case EAdjacentDirection::UP:
-				AddDirectionVector = FVector(0.f, 1.f, 0.f);
-				InitialAddDistance = CurRoom->GetHeightLength(true) + ParentRoom->GetHeightLength(true) + InitialRoomDistance;
+				AddDirectionVector = FVector(1.f, 0.f, 0.f);
+				InitialAddDistance = (CurRoomPrototype->GetWidthLength(true) + ParentRoom->GetWidthLength(true)) * 0.5f + InitialRoomDistance;
 				break;
 			case EAdjacentDirection::RIGHT:
-				AddDirectionVector = FVector(1.f, 0.f, 0.f);
-				InitialAddDistance = CurRoom->GetWidthLength(true) + ParentRoom->GetWidthLength(true) + InitialRoomDistance;
+				AddDirectionVector = FVector(0.f, 1.f, 0.f);
+				InitialAddDistance = (CurRoomPrototype->GetHeightLength(true) + ParentRoom->GetHeightLength(true)) * 0.5f + InitialRoomDistance;
 				break;
 			case EAdjacentDirection::DOWN:
-				AddDirectionVector = FVector(0.f, -1.f, 0.f);
-				InitialAddDistance = CurRoom->GetHeightLength(true) + ParentRoom->GetHeightLength(true) + InitialRoomDistance;
+				AddDirectionVector = FVector(-1.f, 0.f, 0.f);
+				InitialAddDistance = (CurRoomPrototype->GetWidthLength(true) + ParentRoom->GetWidthLength(true)) * 0.5f + InitialRoomDistance;
 				break;
 			}
 
-			GenerateLocation = ParentRoom->GetCenterLocation() + AddDirectionVector * InitialAddDistance;
+			CurCenterLocation = ParentRoom->GetCenterLocation() + AddDirectionVector * InitialAddDistance;
 
 			// 무한 루프 주의
 			while(true)
 			{
-				CurRoom->SetCenterLocation(GenerateLocation);
+				CurRoomPrototype->SetCenterLocation(CurCenterLocation);
 				bool bPass = true;
 				for(auto room : GeneratedRooms)
-					bPass = bPass && !(room.Value->IsCollideWith(CurRoom));
+					bPass = bPass && !(room.Value->IsCollideWith(CurRoomPrototype));
 
 				if(bPass) break;
-				GenerateLocation += AddDirectionVector * 50.f;	// TODO: 단위 길이 조정 (변수로 빼거나 등)
+				CurCenterLocation += AddDirectionVector * 50.f;	// TODO: 단위 길이 조정 (변수로 빼거나 등)
 			}
 		}
 		else	// 부모 방 없을 때
 		{
 			// 일단 가만 두기
-			CurRoom->SetCenterLocation(GenerateLocation);
+			CurRoomPrototype->SetCenterLocation(CurCenterLocation);
 		}
-		
+
+		// Prototype 과 동일한 CurRoom 생성하고 Prototype은 파괴, GeneratedRooms 에 CurRoom 등록으로 변경
+		ALABRoomBase* CurRoom = Cast<ALABRoomBase>(GetWorld()->SpawnActor(CurRoomPrototype->GetClass(), &CurRoomPrototype->GetActorTransform()));
+		CurRoom->SetCenterLocation(CurCenterLocation);	// TODO: 변경 (수치만 되도록 하거나 등)
+		CurRoom->SetAdjecentDirection((EAdjacentDirection)(((int)GenerateDirectionFromParent + 2) % 4), true);	// TODO: RoomBase 함수로 바꾸는 것 고려
+		CurRoomPrototype->Destroy();
 		GeneratedRooms.Add(curIndex, CurRoom);
 
 		// TEST - 디버그 프린트 용 함수 (블루프린트 구현)
@@ -111,16 +120,36 @@ void ULABLevelGenerator::GenerateRooms()
 	}
 }
 
+void ULABLevelGenerator::ClearRooms()
+{
+	for(auto room : GeneratedRooms)
+	{
+		if(IsValid(room.Value))
+		{
+			room.Value->Destroy();
+		}
+	}
+
+	GeneratedRooms.Empty();
+}
+
 void ULABLevelGenerator::InitRoomTree()
 {
 	// TODO: 현재 Test 용 => 추후 데이터 에셋에서 가져와 초기회하는 것으로 변경
 	const int RoomNum = 5;
 	RoomTree.SetNum(RoomNum);
-	const auto TestRoomFinder = ConstructorHelpers::FClassFinder<ALABRoomBase>(TEXT("/Script/Engine.Blueprint'/Game/_Project/Blueprint/Level/Room/BP_RoomTest.BP_RoomTest_C'"));
+	const auto TestRoomFinder = ConstructorHelpers::FClassFinder<ALABRoomBase>(TEXT("/Script/Engine.Blueprint'/Game/_Project/Blueprint/Level/Room/Test/BP_RoomTest.BP_RoomTest_C'"));
+
+	TestRoomArray.Add(ConstructorHelpers::FClassFinder<ALABRoomBase>(TEXT("/Script/Engine.Blueprint'/Game/_Project/Blueprint/Level/Room/Test/BP_RoomTest_1.BP_RoomTest_1_C'")));
+	TestRoomArray.Add(ConstructorHelpers::FClassFinder<ALABRoomBase>(TEXT("/Script/Engine.Blueprint'/Game/_Project/Blueprint/Level/Room/Test/BP_RoomTest_2.BP_RoomTest_2_C'")));
+	TestRoomArray.Add(ConstructorHelpers::FClassFinder<ALABRoomBase>(TEXT("/Script/Engine.Blueprint'/Game/_Project/Blueprint/Level/Room/Test/BP_RoomTest_3.BP_RoomTest_3_C'")));
+	TestRoomArray.Add(ConstructorHelpers::FClassFinder<ALABRoomBase>(TEXT("/Script/Engine.Blueprint'/Game/_Project/Blueprint/Level/Room/Test/BP_RoomTest_4.BP_RoomTest_4_C'")));
 	
 	for(int i=0; i<RoomNum; i++)
 	{
 		RoomTree[i].RoomBP = TestRoomFinder.Class;
+		// int randIdx = FMath::RandRange(0, TestRoomArray.Num() - 1);
+		// RoomTree[i].RoomBP = TestRoomArray[randIdx].Class;
 	}
 
 	RoomTree[0].ChildRoomIndices.Push(1);

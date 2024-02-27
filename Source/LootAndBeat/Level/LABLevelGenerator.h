@@ -41,6 +41,9 @@ private:
 	UFUNCTION(BlueprintCallable)
 	void GenerateRooms();
 
+	UFUNCTION(BlueprintCallable)
+	void ClearRooms();
+
 	
 private:
 	// TODO: 방 트리 데이터
@@ -49,4 +52,7 @@ private:
 	void InitRoomTree();
 
 	TMap<int, ALABRoomBase*> GeneratedRooms;
+
+	// Test
+	TArray<ConstructorHelpers::FClassFinder<ALABRoomBase>> TestRoomArray;
 };

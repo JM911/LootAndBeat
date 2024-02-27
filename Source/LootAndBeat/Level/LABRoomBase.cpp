@@ -208,7 +208,7 @@ EAdjacentDirection ALABRoomBase::GetNextAdjacentDirection() const
 	}
 
 	if(MinOccupiedDirections.Num() == 3)
-		return (EAdjacentDirection)(3 - (int)MaxOccupiedDirection);
+		return (EAdjacentDirection)(((int)MaxOccupiedDirection + 2) % 4);
 
 	return MinOccupiedDirections.IsEmpty() ? EAdjacentDirection::UP : MinOccupiedDirections[0];
 }

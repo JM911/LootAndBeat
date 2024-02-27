@@ -12,6 +12,7 @@ enum class EAdjacentDirection : uint8
 	UP = 1,
 	RIGHT = 2,
 	DOWN = 3,
+	NONE = 4,
 };
 
 UCLASS()
