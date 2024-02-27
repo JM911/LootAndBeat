@@ -3,7 +3,6 @@
 
 #include "LABRoomBase.h"
 
-#include "AsyncTreeDifferences.h"
 #include "Components/InstancedStaticMeshComponent.h"
 
 // Sets default values
@@ -33,7 +32,8 @@ ALABRoomBase::ALABRoomBase()
 void ALABRoomBase::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
+	InitRoom();
 }
 
 void ALABRoomBase::OnConstruction(const FTransform& Transform)
@@ -49,6 +49,21 @@ void ALABRoomBase::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+}
+
+void ALABRoomBase::InitRoom()
+{
+	// Property Setting
+	InitDirectionMap();
+}
+
+void ALABRoomBase::InitDirectionMap()
+{
+	OccupiedDirectionMap.Empty();
+	OccupiedDirectionMap.Add(EAdjacentDirection::LEFT, 0);
+	OccupiedDirectionMap.Add(EAdjacentDirection::UP, 0);
+	OccupiedDirectionMap.Add(EAdjacentDirection::RIGHT, 0);
+	OccupiedDirectionMap.Add(EAdjacentDirection::DOWN, 0);
 }
 
 void ALABRoomBase::RefreshFloor()
@@ -112,5 +127,100 @@ void ALABRoomBase::RefreshWall()
 			}
 		}
 	}
+}
+
+float ALABRoomBase::GetWidthLength(bool bWithWall)
+{
+	float ret = (float)FloorNumX * FloorSize;
+	if(bWithWall)
+		ret += WallSize;
+	return ret;
+}
+
+float ALABRoomBase::GetHeightLength(bool bWithWall)
+{
+	float ret = (float)FloorNumY * FloorSize;
+	if(bWithWall)
+		ret += WallSize;
+	return ret;
+}
+
+FVector ALABRoomBase::GetCenterLocation() const
+{
+	return CenterLocation;
+}
+
+void ALABRoomBase::SetCenterLocation(FVector Location)
+{
+	CenterLocation = Location;
+	float x = Location.X - ((float)FloorNumX * FloorSize * 0.5f);
+	float y = Location.Y - ((float)FloorNumY * FloorSize * 0.5f);
+
+	SetActorLocation(FVector(x, y, Location.Z));
+}
+
+bool ALABRoomBase::IsCollideWith(ALABRoomBase* OtherRoom)
+{
+	const float diffX = FMath::Abs(CenterLocation.X - OtherRoom->CenterLocation.X);
+	const float diffY = FMath::Abs(CenterLocation.Y - OtherRoom->CenterLocation.Y);
+	// TODO: 최소 간격만큼 벌어져있지 않으면 직접 닿지 않아도 충돌로 판정 => 값을 멤버 변수로 변경하거나 등...
+	const float eps = 100.f;
+
+	const float myX = (float)FloorNumX * FloorSize * 0.5f + WallSize;
+	const float myY = (float)FloorNumY * FloorSize * 0.5f + WallSize;
+	const float otherX = (float)(OtherRoom->FloorNumX) * (OtherRoom->FloorSize) * 0.5f + OtherRoom->WallSize;
+	const float otherY = (float)(OtherRoom->FloorNumY) * (OtherRoom->FloorSize) * 0.5f + OtherRoom->WallSize;
+	
+	const bool bCollideX = diffX < (myX + otherX + eps);
+	const bool bCollideY = diffY < (myY + otherY + eps);
+
+	return bCollideX && bCollideY;
+}
+
+EAdjacentDirection ALABRoomBase::GetNextAdjacentDirection() const
+{
+	TArray<EAdjacentDirection> MinOccupiedDirections;
+	EAdjacentDirection MaxOccupiedDirection = EAdjacentDirection::UP;
+
+	int minDirectionNum = 99;
+	int maxDirectionNum = -1;
+	for(auto elem : OccupiedDirectionMap)
+	{
+		if(elem.Value == minDirectionNum)
+			MinOccupiedDirections.Add(elem.Key);
+		if(elem.Value < minDirectionNum)
+		{
+			minDirectionNum = elem.Value;
+			MinOccupiedDirections.Empty();
+			MinOccupiedDirections.Add(elem.Key);
+		}
+		if(elem.Value > maxDirectionNum)
+		{
+			maxDirectionNum = elem.Value;
+			MaxOccupiedDirection = elem.Key;
+		}
+	}
+
+	if(MinOccupiedDirections.Num() == 4 || MinOccupiedDirections.Num() == 2)
+	{
+		int randIdx = FMath::RandRange(0, MinOccupiedDirections.Num() - 1);
+		return MinOccupiedDirections[randIdx];
+	}
+
+	if(MinOccupiedDirections.Num() == 3)
+		return (EAdjacentDirection)(3 - (int)MaxOccupiedDirection);
+
+	return MinOccupiedDirections.IsEmpty() ? EAdjacentDirection::UP : MinOccupiedDirections[0];
+}
+
+void ALABRoomBase::SetAdjecentDirection(EAdjacentDirection Direction, bool bOccupy)
+{
+	if(OccupiedDirectionMap.IsEmpty())
+		InitDirectionMap();
+	
+	if(bOccupy)
+		OccupiedDirectionMap[Direction]++;
+	else
+		OccupiedDirectionMap[Direction]--;
 }
 
