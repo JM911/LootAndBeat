@@ -104,12 +104,14 @@ void ULABLevelGenerator::GenerateRooms()
 		// Prototype 과 동일한 CurRoom 생성하고 Prototype은 파괴, GeneratedRooms 에 CurRoom 등록으로 변경
 		ALABRoomBase* CurRoom = Cast<ALABRoomBase>(GetWorld()->SpawnActor(CurRoomPrototype->GetClass(), &CurRoomPrototype->GetActorTransform()));
 		CurRoom->SetCenterLocation(CurCenterLocation);	// TODO: 변경 (수치만 되도록 하거나 등)
-		CurRoom->SetAdjecentDirection((EAdjacentDirection)(((int)GenerateDirectionFromParent + 2) % 4), true);	// TODO: RoomBase 함수로 바꾸는 것 고려
+		if(GenerateDirectionFromParent != EAdjacentDirection::NONE)
+			CurRoom->SetAdjecentDirection((EAdjacentDirection)(((int)GenerateDirectionFromParent + 2) % 4), true);	// TODO: RoomBase 함수로 바꾸는 것 고려
 		CurRoomPrototype->Destroy();
 		GeneratedRooms.Add(curIndex, CurRoom);
 
 		// TEST - 디버그 프린트 용 함수 (블루프린트 구현)
 		CurRoom->SetRoomDebugTest(curIndex);
+		// TEST - 방 연결 디버그 선 표시
 		if(ParentRoomIndex >= 0)
 			DrawDebugLine(GetWorld(), GeneratedRooms[ParentRoomIndex]->GetCenterLocation(), CurRoom->GetCenterLocation(), FColor::Red, true);
 		
@@ -131,6 +133,9 @@ void ULABLevelGenerator::ClearRooms()
 	}
 
 	GeneratedRooms.Empty();
+
+	// TEST - 방 연결 디버그 선 제거
+	FlushPersistentDebugLines(GetWorld());
 }
 
 void ULABLevelGenerator::InitRoomTree()
