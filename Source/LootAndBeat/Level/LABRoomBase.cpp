@@ -131,7 +131,7 @@ void ALABRoomBase::RefreshWall()
 
 float ALABRoomBase::GetWidthLength(bool bWithWall)
 {
-	float ret = (float)FloorNumX * FloorSize;
+	float ret = (float)FloorNumY * FloorSize;
 	if(bWithWall)
 		ret += WallSize;
 	return ret;
@@ -139,7 +139,7 @@ float ALABRoomBase::GetWidthLength(bool bWithWall)
 
 float ALABRoomBase::GetHeightLength(bool bWithWall)
 {
-	float ret = (float)FloorNumY * FloorSize;
+	float ret = (float)FloorNumX * FloorSize;
 	if(bWithWall)
 		ret += WallSize;
 	return ret;
@@ -159,7 +159,25 @@ void ALABRoomBase::SetCenterLocation(FVector Location)
 	SetActorLocation(FVector(x, y, Location.Z));
 }
 
-bool ALABRoomBase::IsCollideWith(ALABRoomBase* OtherRoom)
+float ALABRoomBase::GetDistanceXWith(const ALABRoomBase* OtherRoom)
+{
+	const float diffX = FMath::Abs(CenterLocation.X - OtherRoom->CenterLocation.X);
+	const float myX = (float)FloorNumX * FloorSize * 0.5f + WallSize;
+	const float otherX = (float)(OtherRoom->FloorNumX) * (OtherRoom->FloorSize) * 0.5f + OtherRoom->WallSize;
+
+	return diffX - myX - otherX;
+}
+
+float ALABRoomBase::GetDistanceYWith(const ALABRoomBase* OtherRoom)
+{
+	const float diffY = FMath::Abs(CenterLocation.Y - OtherRoom->CenterLocation.Y);
+	const float myY = (float)FloorNumY * FloorSize * 0.5f + WallSize;
+	const float otherY = (float)(OtherRoom->FloorNumY) * (OtherRoom->FloorSize) * 0.5f + OtherRoom->WallSize;
+
+	return diffY - myY - otherY;
+}
+
+bool ALABRoomBase::IsCollideWith(const ALABRoomBase* OtherRoom)
 {
 	const float diffX = FMath::Abs(CenterLocation.X - OtherRoom->CenterLocation.X);
 	const float diffY = FMath::Abs(CenterLocation.Y - OtherRoom->CenterLocation.Y);
@@ -222,5 +240,58 @@ void ALABRoomBase::SetAdjecentDirection(EAdjacentDirection Direction, bool bOccu
 		OccupiedDirectionMap[Direction]++;
 	else
 		OccupiedDirectionMap[Direction]--;
+}
+
+void ALABRoomBase::MakeDoor(EAdjacentDirection Direction)
+{
+	// TODO
+}
+
+void ALABRoomBase::MakePath(EAdjacentDirection Direction, float Length)
+{
+	if(Direction == EAdjacentDirection::NONE) return;
+	
+	float DistanceFromCenter = 0.f;
+	FVector PathDirection(0.f);
+
+	switch (Direction)
+	{
+	case EAdjacentDirection::UP:
+		DistanceFromCenter = GetHeightLength(true) * 0.5f;
+		PathDirection = FVector(1.f, 0.f, 0.f);
+		break;
+	case EAdjacentDirection::DOWN:
+		DistanceFromCenter = GetHeightLength(true) * 0.5f;
+		PathDirection = FVector(-1.f, 0.f, 0.f);
+		break;
+	case EAdjacentDirection::LEFT:
+		DistanceFromCenter = GetWidthLength(true) * 0.5f;
+		PathDirection = FVector(0.f, -1.f, 0.f);
+		break;
+	case EAdjacentDirection::RIGHT:
+		DistanceFromCenter = GetWidthLength(true) * 0.5f;
+		PathDirection = FVector(0.f, 1.f, 0.f);
+		break;
+	}
+
+	FVector Offset = FVector(0.f, 0.f, -1.f);
+	FVector PathStartLocation = CenterLocation + PathDirection * DistanceFromCenter + Offset;
+	FVector PathEndLocation = PathStartLocation + PathDirection * Length;
+
+	// TODO: 정상구현 (현재 임시 표시용 바닥만 생성)
+	float CurLength = 0.f;
+	if(WallSize <= 0.f) return;
+	
+	while(CurLength < Length)
+	{
+		FVector InstanceLocation =  PathStartLocation + PathDirection * CurLength;
+		InstanceLocation = GetActorTransform().InverseTransformPosition(InstanceLocation);
+		
+		FTransform InstanceTransform = FTransform::Identity;
+		InstanceTransform.SetLocation(InstanceLocation);
+		InstancedWall->AddInstance(InstanceTransform);
+		
+		CurLength += WallSize;
+	}
 }
 

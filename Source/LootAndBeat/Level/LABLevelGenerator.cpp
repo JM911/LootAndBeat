@@ -47,6 +47,7 @@ void ULABLevelGenerator::GenerateRooms()
 		// ~Test
 		FVector CurCenterLocation(0.f, 0.f, 0.f);
 		EAdjacentDirection GenerateDirectionFromParent = EAdjacentDirection::NONE;
+		float PathLength = 200.f;
 
 		// 위치 잡기
 		if(ParentRoomIndex >= 0)	// 부모 방 존재할 때
@@ -65,19 +66,19 @@ void ULABLevelGenerator::GenerateRooms()
 			{
 			case EAdjacentDirection::LEFT:
 				AddDirectionVector = FVector(0.f, -1.f, 0.f);
-				InitialAddDistance = (CurRoomPrototype->GetHeightLength(true) + ParentRoom->GetHeightLength(true)) * 0.5f + InitialRoomDistance; 
+				InitialAddDistance = (CurRoomPrototype->GetWidthLength(true) + ParentRoom->GetWidthLength(true)) * 0.5f + InitialRoomDistance; 
 				break;
 			case EAdjacentDirection::UP:
 				AddDirectionVector = FVector(1.f, 0.f, 0.f);
-				InitialAddDistance = (CurRoomPrototype->GetWidthLength(true) + ParentRoom->GetWidthLength(true)) * 0.5f + InitialRoomDistance;
+				InitialAddDistance = (CurRoomPrototype->GetHeightLength(true) + ParentRoom->GetHeightLength(true)) * 0.5f + InitialRoomDistance;
 				break;
 			case EAdjacentDirection::RIGHT:
 				AddDirectionVector = FVector(0.f, 1.f, 0.f);
-				InitialAddDistance = (CurRoomPrototype->GetHeightLength(true) + ParentRoom->GetHeightLength(true)) * 0.5f + InitialRoomDistance;
+				InitialAddDistance = (CurRoomPrototype->GetWidthLength(true) + ParentRoom->GetWidthLength(true)) * 0.5f + InitialRoomDistance;
 				break;
 			case EAdjacentDirection::DOWN:
 				AddDirectionVector = FVector(-1.f, 0.f, 0.f);
-				InitialAddDistance = (CurRoomPrototype->GetWidthLength(true) + ParentRoom->GetWidthLength(true)) * 0.5f + InitialRoomDistance;
+				InitialAddDistance = (CurRoomPrototype->GetHeightLength(true) + ParentRoom->GetHeightLength(true)) * 0.5f + InitialRoomDistance;
 				break;
 			}
 
@@ -94,6 +95,12 @@ void ULABLevelGenerator::GenerateRooms()
 				if(bPass) break;
 				CurCenterLocation += AddDirectionVector * 50.f;	// TODO: 단위 길이 조정 (변수로 빼거나 등)
 			}
+
+			// 부모 방과 이어지는 통로 길이 측정
+			if(GenerateDirectionFromParent == EAdjacentDirection::UP || GenerateDirectionFromParent == EAdjacentDirection::DOWN)
+				PathLength += CurRoomPrototype->GetDistanceXWith(ParentRoom);
+			else
+				PathLength += CurRoomPrototype->GetDistanceYWith(ParentRoom);
 		}
 		else	// 부모 방 없을 때
 		{
@@ -105,15 +112,19 @@ void ULABLevelGenerator::GenerateRooms()
 		ALABRoomBase* CurRoom = Cast<ALABRoomBase>(GetWorld()->SpawnActor(CurRoomPrototype->GetClass(), &CurRoomPrototype->GetActorTransform()));
 		CurRoom->SetCenterLocation(CurCenterLocation);	// TODO: 변경 (수치만 되도록 하거나 등)
 		if(GenerateDirectionFromParent != EAdjacentDirection::NONE)
-			CurRoom->SetAdjecentDirection((EAdjacentDirection)(((int)GenerateDirectionFromParent + 2) % 4), true);	// TODO: RoomBase 함수로 바꾸는 것 고려
+		{
+			EAdjacentDirection ParentDirectionFromChild = (EAdjacentDirection)(((int)GenerateDirectionFromParent + 2) % 4);
+			CurRoom->SetAdjecentDirection(ParentDirectionFromChild, true);	// TODO: RoomBase 함수로 바꾸는 것 고려
+			CurRoom->MakePath(ParentDirectionFromChild, PathLength);
+		}
 		CurRoomPrototype->Destroy();
 		GeneratedRooms.Add(curIndex, CurRoom);
 
 		// TEST - 디버그 프린트 용 함수 (블루프린트 구현)
 		CurRoom->SetRoomDebugTest(curIndex);
 		// TEST - 방 연결 디버그 선 표시
-		if(ParentRoomIndex >= 0)
-			DrawDebugLine(GetWorld(), GeneratedRooms[ParentRoomIndex]->GetCenterLocation(), CurRoom->GetCenterLocation(), FColor::Red, true);
+		// if(ParentRoomIndex >= 0)
+		// 	DrawDebugLine(GetWorld(), GeneratedRooms[ParentRoomIndex]->GetCenterLocation(), CurRoom->GetCenterLocation(), FColor::Red, true);
 		
 		for(auto elem : RoomTree[curIndex].ChildRoomIndices)
 		{
@@ -135,7 +146,7 @@ void ULABLevelGenerator::ClearRooms()
 	GeneratedRooms.Empty();
 
 	// TEST - 방 연결 디버그 선 제거
-	FlushPersistentDebugLines(GetWorld());
+	// FlushPersistentDebugLines(GetWorld());
 }
 
 void ULABLevelGenerator::InitRoomTree()

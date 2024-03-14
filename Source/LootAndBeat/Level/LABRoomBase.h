@@ -88,11 +88,16 @@ public:
 	FVector GetCenterLocation() const;
 	void SetCenterLocation(FVector Location);
 
-	bool IsCollideWith(ALABRoomBase* OtherRoom);
+	float GetDistanceXWith(const ALABRoomBase* OtherRoom);
+	float GetDistanceYWith(const ALABRoomBase* OtherRoom);
+	bool IsCollideWith(const ALABRoomBase* OtherRoom);
 
 	EAdjacentDirection GetNextAdjacentDirection() const;
 	void SetAdjecentDirection(EAdjacentDirection Direction, bool bOccupy);
 
 	UFUNCTION(BlueprintImplementableEvent)
 	void SetRoomDebugTest(int RoomIndex);
+
+	void MakeDoor(EAdjacentDirection Direction);
+	void MakePath(EAdjacentDirection Direction, float Length);
 };
