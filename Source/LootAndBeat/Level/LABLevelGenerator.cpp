@@ -101,6 +101,9 @@ void ULABLevelGenerator::GenerateRooms()
 				PathLength += CurRoomPrototype->GetDistanceXWith(ParentRoom);
 			else
 				PathLength += CurRoomPrototype->GetDistanceYWith(ParentRoom);
+
+			// 부모 방 문 생성
+			ParentRoom->MakeDoor(GenerateDirectionFromParent);
 		}
 		else	// 부모 방 없을 때
 		{
@@ -111,11 +114,14 @@ void ULABLevelGenerator::GenerateRooms()
 		// Prototype 과 동일한 CurRoom 생성하고 Prototype은 파괴, GeneratedRooms 에 CurRoom 등록으로 변경
 		ALABRoomBase* CurRoom = Cast<ALABRoomBase>(GetWorld()->SpawnActor(CurRoomPrototype->GetClass(), &CurRoomPrototype->GetActorTransform()));
 		CurRoom->SetCenterLocation(CurCenterLocation);	// TODO: 변경 (수치만 되도록 하거나 등)
+
+		// 통로, 문 생성
 		if(GenerateDirectionFromParent != EAdjacentDirection::NONE)
 		{
 			EAdjacentDirection ParentDirectionFromChild = (EAdjacentDirection)(((int)GenerateDirectionFromParent + 2) % 4);
 			CurRoom->SetAdjecentDirection(ParentDirectionFromChild, true);	// TODO: RoomBase 함수로 바꾸는 것 고려
 			CurRoom->MakePath(ParentDirectionFromChild, PathLength);
+			CurRoom->MakeDoor(ParentDirectionFromChild);
 		}
 		CurRoomPrototype->Destroy();
 		GeneratedRooms.Add(curIndex, CurRoom);

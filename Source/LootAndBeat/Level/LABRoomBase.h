@@ -39,6 +39,8 @@ private:
 	void RefreshFloor();
 	void RefreshWall();
 
+	void InitPath();
+
 protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<USceneComponent> RootScene;
@@ -48,6 +50,9 @@ protected:
 	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	TObjectPtr<UInstancedStaticMeshComponent> InstancedWall;
+	
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
+	TObjectPtr<UInstancedStaticMeshComponent> InstancedPath;
 	
 private:
 	/* Setting */
@@ -73,6 +78,13 @@ private:
 	UPROPERTY(EditDefaultsOnly, Category = "Setting", meta = (AllowPrivateAccess = "true"))
 	TObjectPtr<UStaticMesh> WallMesh;
 
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Setting", meta = (AllowPrivateAccess = "true"))
+	float PathSize = 100.f;
+	
+	UPROPERTY(EditDefaultsOnly, Category = "Setting", meta = (AllowPrivateAccess = "true"))
+	TObjectPtr<UStaticMesh> PathMesh;
+
 	/* Property */
 	// 방 바닥 중간지점의 월드 좌표 (해당 좌표 기반으로 위치 선정, 충돌 판정 등 수행)
 	UPROPERTY(BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
@@ -80,6 +92,13 @@ private:
 
 	// 연결된 인접한 방이 있는 방향과 개수
 	TMap<EAdjacentDirection, int> OccupiedDirectionMap;
+
+	// 문 방향
+	TSet<EAdjacentDirection> DoorDirectionSet;
+
+	// 문 크기
+	float DoorWidth = 250.f;
+	float DoorHeight = 400.f;
 
 public:
 	float GetWidthLength(bool bWithWall = false);

@@ -20,6 +20,9 @@ ALABRoomBase::ALABRoomBase()
 	
 	InstancedWall = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("InstancedWall"));
 	InstancedWall->SetupAttachment(GetRootComponent());
+	
+	InstancedPath = CreateDefaultSubobject<UInstancedStaticMeshComponent>(TEXT("InstancedPath"));
+	InstancedPath->SetupAttachment(GetRootComponent());
 
 	const auto DefaultFloorMesh = ConstructorHelpers::FObjectFinder<UStaticMesh>(TEXT("/Script/Engine.StaticMesh'/Game/_Project/Asset/Level/Mesh/SM_Floor_100x100.SM_Floor_100x100'"));
 	if(DefaultFloorMesh.Succeeded())
@@ -55,6 +58,8 @@ void ALABRoomBase::InitRoom()
 {
 	// Property Setting
 	InitDirectionMap();
+	InitPath();
+	DoorDirectionSet.Empty();
 }
 
 void ALABRoomBase::InitDirectionMap()
@@ -90,31 +95,58 @@ void ALABRoomBase::RefreshWall()
 	InstancedWall->ClearInstances();
 	InstancedWall->SetStaticMesh(WallMesh);
 
+	TArray<EAdjacentDirection> Directions = { EAdjacentDirection::UP, EAdjacentDirection::LEFT, EAdjacentDirection::DOWN, EAdjacentDirection::RIGHT };
+	
 	if(WallMesh)
 	{
-		for(int dir=0; dir<4; dir++)
+		for(auto dir : Directions)//int dir=0; dir<4; dir++)
 		{
-			const int WallLength = (dir % 2) == 0 ? FloorNumX : FloorNumY;
+			// 문 생성 방향 (위치는 일단 가운데에 생성, 크기는 멤버 변수 고정 => 추후 변경 여지 있음)
+			int DoorWidthStartIndex = -1;
+			int DoorWidthEndIndex = -1;
+			int DoorHeightEndIndex = -1;	// 항상 바닥부터 시작하므로 시작 인덱스는 필요 없음
+			if(DoorDirectionSet.Contains(dir))
+			{
+				float DoorStartDist = (GetWidthLength(false) - DoorWidth) / 2.f;
+				if(dir == EAdjacentDirection::LEFT || dir == EAdjacentDirection::RIGHT)
+					DoorStartDist = (GetHeightLength(false) - DoorWidth) / 2.f;
+				
+				float DoorEndDist = DoorStartDist + DoorWidth;
+
+				DoorWidthStartIndex = DoorStartDist / WallSize; 
+				DoorWidthEndIndex = DoorEndDist / WallSize;
+				DoorHeightEndIndex = DoorHeight / WallSize;
+			}
+			
+			//const int WallLength = (dir % 2) == 0 ? FloorNumX : FloorNumY;
+			int WallLength = FloorNumX;
+			if(dir == EAdjacentDirection::UP || dir == EAdjacentDirection::DOWN)
+				WallLength = FloorNumY;
+			
 			for(int i=0; i<WallLength; i++)
 			{
 				for(int j=0; j<WallHeight; j++)
 				{
+					// 문 위치라면 스킵 - TODO: 문 끝자락은 없애지 않고 스케일, 위치 오프셋 변경하도록 (문 크기 디테일하게 조정)
+					if(i >= DoorWidthStartIndex && i <= DoorWidthEndIndex && j < DoorHeightEndIndex)
+						continue;
+					
 					FVector InstanceLocation(0.f, 0.f, (j+1)*WallSize);
 					switch(dir)
 					{
-					case 0:
+					case EAdjacentDirection::LEFT:
 						InstanceLocation.X = i * WallSize;
 						InstanceLocation.Y = -1.f * WallSize;
 						break;
-					case 1:
+					case EAdjacentDirection::UP:
 						InstanceLocation.X = FloorNumX * WallSize;
 						InstanceLocation.Y = i * WallSize;
 						break;
-					case 2:
+					case EAdjacentDirection::RIGHT:
 						InstanceLocation.X = i * WallSize;
 						InstanceLocation.Y = FloorNumY * WallSize;
 						break;
-					case 3:
+					case EAdjacentDirection::DOWN:
 						InstanceLocation.X = -1.f * WallSize;
 						InstanceLocation.Y = i * WallSize;
 						break;
@@ -127,6 +159,12 @@ void ALABRoomBase::RefreshWall()
 			}
 		}
 	}
+}
+
+void ALABRoomBase::InitPath()
+{
+	InstancedPath->ClearInstances();
+	InstancedPath->SetStaticMesh(PathMesh);
 }
 
 float ALABRoomBase::GetWidthLength(bool bWithWall)
@@ -244,7 +282,8 @@ void ALABRoomBase::SetAdjecentDirection(EAdjacentDirection Direction, bool bOccu
 
 void ALABRoomBase::MakeDoor(EAdjacentDirection Direction)
 {
-	// TODO
+	DoorDirectionSet.Add(Direction);
+	RefreshWall();
 }
 
 void ALABRoomBase::MakePath(EAdjacentDirection Direction, float Length)
@@ -277,21 +316,28 @@ void ALABRoomBase::MakePath(EAdjacentDirection Direction, float Length)
 	FVector Offset = FVector(0.f, 0.f, -1.f);
 	FVector PathStartLocation = CenterLocation + PathDirection * DistanceFromCenter + Offset;
 	FVector PathEndLocation = PathStartLocation + PathDirection * Length;
+	FVector PathRightDirection = FVector::CrossProduct(FVector::UpVector, PathDirection);
+	
 
 	// TODO: 정상구현 (현재 임시 표시용 바닥만 생성)
-	float CurLength = 0.f;
-	if(WallSize <= 0.f) return;
-	
-	while(CurLength < Length)
+	if(PathSize <= 0.f) return;
+
+	for(int i=-1; i<2; i++)
 	{
-		FVector InstanceLocation =  PathStartLocation + PathDirection * CurLength;
-		InstanceLocation = GetActorTransform().InverseTransformPosition(InstanceLocation);
+		float CurLength = 0.f;
+		FVector CurOffset = PathRightDirection * i * PathSize;
+		UE_LOG(LogTemp, Warning, TEXT("CurOffset - %f, %f, %f"), CurOffset.X, CurOffset.Y, CurOffset.Z);
+		while(CurLength < Length)
+		{
+			FVector InstanceLocation =  PathStartLocation + PathDirection * CurLength + CurOffset;
+			InstanceLocation = GetActorTransform().InverseTransformPosition(InstanceLocation);
 		
-		FTransform InstanceTransform = FTransform::Identity;
-		InstanceTransform.SetLocation(InstanceLocation);
-		InstancedWall->AddInstance(InstanceTransform);
+			FTransform InstanceTransform = FTransform::Identity;
+			InstanceTransform.SetLocation(InstanceLocation);
+			InstancedPath->AddInstance(InstanceTransform);
 		
-		CurLength += WallSize;
+			CurLength += PathSize;
+		}
 	}
 }
 
