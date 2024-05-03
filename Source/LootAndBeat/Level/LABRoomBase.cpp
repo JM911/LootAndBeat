@@ -219,7 +219,7 @@ bool ALABRoomBase::IsCollideWith(const ALABRoomBase* OtherRoom)
 {
 	const float diffX = FMath::Abs(CenterLocation.X - OtherRoom->CenterLocation.X);
 	const float diffY = FMath::Abs(CenterLocation.Y - OtherRoom->CenterLocation.Y);
-	// TODO: 최소 간격만큼 벌어져있지 않으면 직접 닿지 않아도 충돌로 판정 => 값을 멤버 변수로 변경하거나 등...
+	// 최소 간격만큼 벌어져있지 않으면 직접 닿지 않아도 충돌로 판정
 	const float eps = 100.f;
 
 	const float myX = (float)FloorNumX * FloorSize * 0.5f + WallSize;

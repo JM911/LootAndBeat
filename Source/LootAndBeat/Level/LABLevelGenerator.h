@@ -44,6 +44,10 @@ private:
 	UFUNCTION(BlueprintCallable)
 	void ClearRooms();
 
+	// Delayed
+	UFUNCTION(BlueprintCallable)
+	void GenerateRoomsDelayed();
+	void GenerateSingleRoomDelayed();
 	
 private:
 	// TODO: 방 트리 데이터
@@ -55,4 +59,8 @@ private:
 
 	// Test
 	TArray<ConstructorHelpers::FClassFinder<ALABRoomBase>> TestRoomArray;
+
+	// Delayed
+	TArray<int> RoomIndexStack_Delayed;
+	FTimerHandle DelayedGenerateTimer;
 };
