@@ -17,7 +17,6 @@ ALABAutoPickupBase::ALABAutoPickupBase()
 	StaticMesh = CreateDefaultSubobject<UStaticMeshComponent>("Static Mesh");
 	StaticMesh->SetupAttachment(RootComponent);
 	StaticMesh->SetCollisionEnabled(ECollisionEnabled::PhysicsOnly);
-	StaticMesh->SetSimulatePhysics(bSimulatePhysics);
 
 	Sphere = CreateDefaultSubobject<USphereComponent>("Sphere");
 	Sphere->SetupAttachment(StaticMesh);
@@ -32,6 +31,7 @@ void ALABAutoPickupBase::BeginPlay()
 {
 	Super::BeginPlay();
 
+	StaticMesh->SetSimulatePhysics(bSimulatePhysics);
 	Sphere->OnComponentBeginOverlap.AddDynamic(this, &ALABAutoPickupBase::OnSphereBeginOverlap);
 }
 
@@ -48,7 +48,6 @@ void ALABAutoPickupBase::OnConstruction(const FTransform& Transform)
 	Super::OnConstruction(Transform);
 	
 	Sphere->SetSphereRadius(PickupRange);
-	StaticMesh->SetSimulatePhysics(bSimulatePhysics);
 }
 
 void ALABAutoPickupBase::OnSphereBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
