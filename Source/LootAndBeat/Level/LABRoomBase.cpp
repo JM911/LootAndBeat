@@ -262,7 +262,7 @@ EAdjacentDirection ALABRoomBase::GetNextAdjacentDirection() const
 		int randIdx = FMath::RandRange(0, MinOccupiedDirections.Num() - 1);
 		return MinOccupiedDirections[randIdx];
 	}
-
+	
 	if(MinOccupiedDirections.Num() == 3)
 		return (EAdjacentDirection)(((int)MaxOccupiedDirection + 2) % 4);
 
@@ -313,7 +313,7 @@ void ALABRoomBase::MakePath(EAdjacentDirection Direction, float Length)
 		break;
 	}
 
-	FVector Offset = FVector(0.f, 0.f, -1.f);
+	FVector Offset = FVector(0.f, 0.f, 50.f);
 	FVector PathStartLocation = CenterLocation + PathDirection * DistanceFromCenter + Offset;
 	FVector PathEndLocation = PathStartLocation + PathDirection * Length;
 	FVector PathRightDirection = FVector::CrossProduct(FVector::UpVector, PathDirection);
