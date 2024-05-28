@@ -73,6 +73,9 @@ void ALABCharacterEnemy::Die()
 
 	// Destroy 타이머
 	GetWorldTimerManager().SetTimer(DieDestroyTimer, this, &ALABCharacterEnemy::DestoryByDead, 5.f);
+
+	// Delegate
+	OnDead.Broadcast();
 }
 
 void ALABCharacterEnemy::DestoryByDead()

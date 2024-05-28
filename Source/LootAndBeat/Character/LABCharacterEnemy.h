@@ -7,6 +7,8 @@
 #include "LootAndBeat/Interface/LABHit.h"
 #include "LABCharacterEnemy.generated.h"
 
+DECLARE_MULTICAST_DELEGATE(FOnDead);
+
 /**
  * 
  */
@@ -34,5 +36,7 @@ private:
 	// TODO: 배열로 변경하여 랜덤 재생 처리
 	UPROPERTY(EditDefaultsOnly)
 	TObjectPtr<UAnimMontage> HitReactMontage;
-	
+
+public:
+	FOnDead OnDead;
 };

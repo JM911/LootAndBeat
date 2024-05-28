@@ -3,7 +3,11 @@
 
 #include "LABRoomBase.h"
 
+#include "LABEnemySpawnerComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/InstancedStaticMeshComponent.h"
+#include "LootAndBeat/Character/LABCharacterPlayer.h"
+#include "Components/CapsuleComponent.h"
 
 // Sets default values
 ALABRoomBase::ALABRoomBase()
@@ -29,6 +33,12 @@ ALABRoomBase::ALABRoomBase()
 	{
 		FloorMesh = DefaultFloorMesh.Object;
 	}
+
+	// Trigger
+	RoomTrigger = CreateDefaultSubobject<UBoxComponent>("Room Trigger");
+	RoomTrigger->SetupAttachment(GetRootComponent());
+	RoomTrigger->SetCollisionResponseToAllChannels(ECR_Ignore);
+	RoomTrigger->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 }
 
 // Called when the game starts or when spawned
@@ -45,6 +55,7 @@ void ALABRoomBase::OnConstruction(const FTransform& Transform)
 
 	RefreshFloor();
 	RefreshWall();
+	RefreshTrigger();
 }
 
 // Called every frame
@@ -60,6 +71,9 @@ void ALABRoomBase::InitRoom()
 	InitDirectionMap();
 	InitPath();
 	DoorDirectionSet.Empty();
+
+	// 트리거 바인딩
+	RoomTrigger->OnComponentBeginOverlap.AddDynamic(this, &ALABRoomBase::OnTriggerBeginOverlap);
 }
 
 void ALABRoomBase::InitDirectionMap()
@@ -165,6 +179,52 @@ void ALABRoomBase::InitPath()
 {
 	InstancedPath->ClearInstances();
 	InstancedPath->SetStaticMesh(PathMesh);
+}
+
+void ALABRoomBase::RefreshTrigger()
+{
+	// 크기, 위치 조정
+	float x = (float)FloorNumX * FloorSize * 0.5f;
+	float y = (float)FloorNumY * FloorSize * 0.5f;
+	RoomTrigger->SetBoxExtent(FVector(x, y, 200.f));
+	RoomTrigger->SetRelativeLocation(FVector(x, y, 100.f));
+}
+
+void ALABRoomBase::OnTriggerBeginOverlap(UPrimitiveComponent* OverlappedComponent, AActor* OtherActor,
+	UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
+{
+	ALABCharacterPlayer* Player = Cast<ALABCharacterPlayer>(OtherActor);
+	if(!Player || OtherComp != Cast<UPrimitiveComponent>(Player->GetCapsuleComponent())) return;
+	
+	// 스포너 컴포넌트에서 적 스폰, 적 개수 저장, 적 죽을 때마다 발동되는 함수 델리게이트 바인딩
+	for(auto elem : GetComponents())
+		if(ULABEnemySpawnerComponent* Spawner = Cast<ULABEnemySpawnerComponent>(elem))
+		{
+			Spawner->SpawnEnemy();
+			++EnemyAliveCount;
+			Spawner->OnEnemyDead.AddUObject(this, &ALABRoomBase::OnEnemyDead);
+		}
+	
+	if(EnemyAliveCount > 0)
+	{
+		// TODO: 방문 닫기 등등
+	}
+}
+
+void ALABRoomBase::OnEnemyDead()
+{
+	--EnemyAliveCount;
+	if(EnemyAliveCount <= 0)
+	{
+		// 언바인딩 등등 => 1회용으롭 변경하면 언바인딩 안해도 되긴 하는데...
+		for(auto elem : GetComponents())
+			if(ULABEnemySpawnerComponent* Spawner = Cast<ULABEnemySpawnerComponent>(elem))
+			{
+				Spawner->OnEnemyDead.RemoveAll(this);
+			}
+		
+		// TODO: 방문 열기 등
+	}
 }
 
 float ALABRoomBase::GetWidthLength(bool bWithWall)
@@ -326,7 +386,7 @@ void ALABRoomBase::MakePath(EAdjacentDirection Direction, float Length)
 	{
 		float CurLength = 0.f;
 		FVector CurOffset = PathRightDirection * i * PathSize;
-		UE_LOG(LogTemp, Warning, TEXT("CurOffset - %f, %f, %f"), CurOffset.X, CurOffset.Y, CurOffset.Z);
+		
 		while(CurLength < Length)
 		{
 			FVector InstanceLocation =  PathStartLocation + PathDirection * CurLength + CurOffset;
